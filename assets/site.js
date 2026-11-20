@@ -994,10 +994,12 @@ const draw = (() => {
       x = p * road.offsetWidth * .6;
     }
     drive.style.setProperty('--lane', (-x).toFixed(1) + 'px');
-    drive.style.setProperty('--bx', (5 + p * 60).toFixed(2) + '%');
+    // the bus keeps a margin from both ends of the road, so it is never cut by the edge of the screen
+    drive.style.setProperty('--bx', clamp((.05 + p * .6) * road.offsetWidth, 16, Math.max(16, road.offsetWidth - busBox.offsetWidth - 16)).toFixed(1) + 'px');
     drive.style.setProperty('--spin', (x * 1.5).toFixed(0) + 'deg');
   };
-  const spills = () => stops.some(s => s.scrollHeight > s.clientHeight + 1);
+  // a photograph pushed down onto its title, or rows taller than the window, means it does not fit
+  const spills = () => track.scrollHeight > track.clientHeight + 1 || stops.some(s => { const ph = $('.stop__photo', s), t = $('.stop__when', s); return (ph && ph.offsetParent && ph.getBoundingClientRect().bottom > t.getBoundingClientRect().top - 8) || s.scrollHeight > s.clientHeight + 1; });
   const layout = () => {
     drive.classList.remove('is-tight');
     track.style.transform = '';

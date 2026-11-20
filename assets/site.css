@@ -590,26 +590,30 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.1); }
 .stop { display: flex; flex-direction: column; padding: 0 clamp(20px, 3vw, 48px) 0 20px; border-left: 1px solid var(--hair-2); }
 .stop__when { font: 600 clamp(28px, 2.8vw, 40px)/1.05 var(--display); letter-spacing: -.03em; text-wrap: balance; }
 .stop__what { max-width: 40ch; margin-top: 12px; font-size: 18px; line-height: 1.5; text-wrap: pretty; }
-.stop .textlink { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; }
-.stop__photo { max-width: 440px; aspect-ratio: 3 / 2; margin-bottom: 20px; border-radius: var(--r-2); overflow: hidden; isolation: isolate; background: var(--kraft-2); }
+.stop .textlink { position: relative; }
+.stop .textlink::after { content: ""; position: absolute; inset: -12px 0; }   /* a taller place to tap, without moving the line */
+.stop__photo { order: 3; max-width: 440px; aspect-ratio: 3 / 2; margin-top: 20px; border-radius: var(--r-2); overflow: hidden; isolation: isolate; background: var(--kraft-2); }
 .stop__photo img { width: 100%; height: 100%; object-fit: cover; }
-.drive__road { position: relative; height: clamp(88px, 13vh, 128px); background: var(--kraft-2); border-top: 2px solid var(--ink); overflow: clip; }
-.drive__lane { position: absolute; left: 0; right: 0; top: 60%; height: 4px; background-image: linear-gradient(to right, var(--white) 0 36px, transparent 36px 72px); background-size: 72px 4px; background-position-x: var(--lane, 0px); }
-.drive__bus { position: absolute; left: var(--bx, 6%); bottom: 24%; width: clamp(112px, 12vw, 176px); }
+.drive__road { --road-h: clamp(88px, 13vh, 128px); position: relative; height: var(--road-h); background: var(--kraft-2); border-top: 2px solid var(--ink); }
+.drive__lane { position: absolute; left: 0; right: 0; top: 50%; height: 4px; background-image: linear-gradient(to right, var(--white) 0 36px, transparent 36px 72px); background-size: 72px 4px; background-position-x: var(--lane, 0px); }
+.drive__bus { position: absolute; left: var(--bx, 6%); bottom: 11%; width: min(clamp(112px, 12vw, 176px), calc(var(--road-h) * 1.45)); }   /* never taller than about eight tenths of the road, so all of it stands inside the band */
 .drive__bus svg { width: 100%; height: auto; overflow: visible; }
 .drive__bus .tyre { transform-box: fill-box; transform-origin: center; transform: rotate(var(--spin, 0deg)); }
-.drive__hint { display: none; position: absolute; right: var(--gutter); bottom: 12px; font-weight: 600; font-size: 14px; white-space: nowrap; opacity: var(--hint, 1); }
+.drive__hint { display: none; position: absolute; right: var(--gutter); bottom: 8px; font-weight: 600; font-size: 14px; white-space: nowrap; opacity: var(--hint, 1); }
 
 /* pinned: the page keeps scrolling and the road moves sideways. The script pins it only on a window where every stop fits whole. */
 .drive.is-pinned .drive__pin { position: sticky; top: 0; height: 100svh; padding-top: calc(var(--nav-h) + clamp(8px, 3vh, 32px)); overflow: clip; }
 .drive.is-pinned .head { max-width: none; }
 .drive.is-pinned .head h2 { font-size: clamp(28px, min(3.8vw, 6.5svh), 60px); }
 .drive.is-pinned .drive__view { -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent); mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent); }
-.drive.is-pinned .stops { display: flex; align-items: flex-end; gap: 0; width: max-content; height: 100%; padding: 16px var(--gutter) 28px; will-change: transform; }
-.drive.is-pinned .stop { flex: none; justify-content: flex-end; width: clamp(280px, 30vw, 420px); height: 100%; }
-.drive.is-pinned .stop__what { font-size: clamp(16px, 2.4svh, 18px); line-height: 1.45; }
-.drive.is-pinned .stop__photo { flex: 1 1 128px; min-height: 128px; max-height: 300px; max-width: none; aspect-ratio: auto; margin-bottom: 16px; }
-.drive.is-pinned .drive__road { height: clamp(72px, 12svh, 128px); }
+/* every stop is three rows of one shared grid (photograph, title, words): so every title stands on the same line,
+   every paragraph starts on the same line, and every rule is the same height */
+.drive.is-pinned .stops { grid-auto-flow: column; grid-auto-columns: clamp(280px, 30vw, 420px); grid-template-columns: none; grid-template-rows: minmax(0, 1fr) auto auto; gap: 0; width: max-content; height: 100%; padding: 16px var(--gutter) 28px; will-change: transform; }
+.drive.is-pinned .stop { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; }
+.drive.is-pinned .stop__photo { grid-row: 1; order: 0; align-self: end; width: 100%; height: min(100% - 16px, 300px); min-height: 128px; max-width: none; aspect-ratio: auto; margin: 0 0 16px; }
+.drive.is-pinned .stop__when { grid-row: 2; align-self: end; }
+.drive.is-pinned .stop__what { grid-row: 3; font-size: clamp(16px, 2.4svh, 18px); line-height: 1.45; }
+.drive.is-pinned .drive__road { --road-h: clamp(72px, 12svh, 128px); }
 @media (max-height: 819px) { .drive.is-pinned .head p { display: none; } }
 .drive.is-pinned .drive__hint { display: block; }
 .drive.is-tight .stop__photo, .drive.is-tight .head p { display: none; }
