@@ -14,15 +14,6 @@ const TZ = 'America/New_York';
 const IMG = 'assets/img/';
 const SHOP_MAIL = 'sheilasbakingco@gmail.com';
 const hooks = {};   // small bridges between the parts below
-const STACKED = '(max-width: 599px), (max-width: 899px) and (max-aspect-ratio: 4/5)';   // the first screen with the wheel under the words; the stylesheet uses the same test
-
-/* the height of the screen with the browser's bars showing: it does not change as they slide away */
-const smallHeight = (() => {
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
-  document.body.append(probe);
-  return () => probe.offsetHeight || innerHeight;
-})();
 
 /* the bakery's own clock, wherever the visitor is */
 const shopNow = () => {
@@ -156,242 +147,127 @@ const navTone = (() => {
   return tone;
 })();
 
-/* ---------------------------------------------------------------- sprinkles: a handful, falling once, when the sprinkle doughnut comes to the front */
-const sprinkles = (() => {
-  const hero = $('[data-hero]');
-  if (!hero || reduced) return () => {};
-  const COLORS = ['#e4572e', '#f2c14e', '#fffdf8', '#17655c', '#6db36b', '#ef8fa3', '#3f6fc4'];
-  let last = 0;
-  return (x, spread, count = 80) => {
-    const now = performance.now();
-    if (now - last < 2500) return;
-    last = now;
-    const c = document.createElement('canvas');
-    if (!c.getContext) return;
-    c.className = 'hero__sprinkles';
-    c.setAttribute('aria-hidden', 'true');
-    hero.append(c);
-    const ctx = c.getContext('2d'), dpr = Math.min(devicePixelRatio || 1, 2), w = c.clientWidth, h = c.clientHeight;
-    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
-    let parts = Array.from({ length: count }, (_, i) => ({ x: x + (Math.random() - .5) * spread, y: -20 - Math.random() * 60, vx: (Math.random() - .5) * 1.6, vy: 1 + Math.random() * 3, a: Math.random() * 6.28, va: (Math.random() - .5) * .3, l: 9 + Math.random() * 8, t: 3.5 + Math.random() * 1.5, c: COLORS[i % COLORS.length], wait: Math.floor(Math.random() * 34) }));
-    const tick = () => {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      parts = parts.filter(p => p.y < h + 40);
-      for (const p of parts) {
-        if (p.wait > 0) { p.wait--; continue; }
-        p.vy = Math.min(p.vy + .22, 11); p.x += p.vx; p.y += p.vy; p.a += p.va;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
-        ctx.fillStyle = p.c;
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(-p.l / 2, -p.t / 2, p.l, p.t, p.t / 2); else ctx.rect(-p.l / 2, -p.t / 2, p.l, p.t);
-        ctx.fill(); ctx.restore();
-      }
-      parts.length ? requestAnimationFrame(tick) : c.remove();
-    };
-    requestAnimationFrame(tick);
-  };
-})();
-
-/* ---------------------------------------------------------------- hero: the wheel.
-   Eight plates on a ring. Whichever is in front fills in the label card and colours the first screen.
-   It turns when you turn it: drag, tap a neighbour, or use the arrows on the card.
-   Only the front plate and its two neighbours show. The script fits them and the card into the room the words leave,
-   so nothing is cut by the fold, the nav or the edge of the screen. */
+/* ---------------------------------------------------------------- the first screen's board: four rows of sixteen tiles.
+   The first two change with the day picked under them: the shop's hours and the bus's stop, read from the hours list
+   in Visit and the day cards in Find the bus. The third is this month's new pastry, read from the line on the menu
+   that carries a note; the fourth is the rating, read from the reviews heading. So each fact is written in one place.
+   A tile turns only when its letter changes; with reduced motion the letters are simply set. */
 (() => {
-  const hero = $('[data-hero]'), el = $('[data-wheel]');
-  if (!hero || !el) return;
-  const plates = $$('[data-plate]', el), n = plates.length, step = (Math.PI * 2) / n;
-  const card = $('.tag', el), copy = $('.hero__copy', hero);
-  const nameEl = $('[data-now-name]'), priceEl = $('[data-now-price]'), descEl = $('[data-now-desc]'), nEl = $('[data-now-n]'), text = $('[data-now]');
-  const prev = $('[data-wheel-prev]'), next = $('[data-wheel-next]');
-  const stacked = matchMedia(STACKED), H = Math.SQRT1_2;
-  let pos = reduced ? 0 : -1.2, target = 0, shown = -1, raf = 0, geo = null, entering = !reduced, swap = 0, lastW = 0, lastH = 0;
+  const el = $('[data-flap]');
+  if (!el || !hours) return;
+  const shopRow = $('[data-flap-shop]', el), busRow = $('[data-flap-bus]', el);
+  const where = $('[data-flap-where]', el), say = $('[data-flap-say]', el), btns = $$('[data-flap-day]', el);
+  if (!shopRow || !busRow || !where || !btns.length) return;
+  const N = 16, NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const noHalf = s => s.replace(/\s[ap]m$/, '');
+  const cards = Object.fromEntries($$('.day[data-day]').map(d => {
+    const link = $('a.textlink', d), parked = ($$('.day__line', d)[1]?.lastChild?.textContent || '').trim().split(/[:,]/)[0];
+    return [+d.dataset.day, { out: d.dataset.out ? d.dataset.out.split('-').map(toMins) : null, place: d.dataset.place || '', town: (d.dataset.stop || '').toUpperCase(), href: link?.getAttribute('href') || '#bus', parked }];
+  }));
 
-  // the tallest the card gets at a width: with that as its height, its arrows never move as the wheel turns
-  const cardHeight = width => {
-    const ghost = card.cloneNode(true);
-    ghost.removeAttribute('data-enter');
-    ghost.style.cssText = `position:absolute;left:0;top:0;bottom:auto;width:${width}px;margin:0;visibility:hidden;opacity:1;transform:none;transition:none`;
-    el.append(ghost);
-    const [a, b, c] = ['[data-now-name]', '[data-now-price]', '[data-now-desc]'].map(q => $(q, ghost));
-    let h = 0;
-    plates.forEach(p => { a.textContent = p.dataset.name; b.textContent = p.dataset.price; c.textContent = p.dataset.desc; h = Math.max(h, ghost.offsetHeight); });
-    ghost.remove();
-    return Math.ceil(h);
+  const tiles = new Map();
+  const dress = host => {
+    host.textContent = '';
+    host.classList.add('is-live');
+    host.setAttribute('role', 'img');
+    tiles.set(host, Array.from({ length: N }, () => { const t = document.createElement('i'); t.setAttribute('aria-hidden', 'true'); host.append(t); return t; }));
   };
-  const put = vars => { for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v.toFixed(1) + 'px'); };
-
-  const measure = () => {
-    hero.style.removeProperty('--need');
-    const W = hero.clientWidth, hr = hero.getBoundingClientRect(), cr = copy.getBoundingClientRect();
-    const g = Math.max(16, cr.left - hr.left);   // the page gutter
-    lastW = W; lastH = innerHeight;
-    let north, d, fx, fy, dx, dy, tw, th, tx, tb, need = 0;
-    if (stacked.matches) {
-      // under the words: the plate takes what is left of the first screen, the card laps its lower edge
-      const lap = 44;
-      tw = Math.min(W - 2 * g, 440); th = cardHeight(tw);
-      const fold = smallHeight() - hero.offsetTop;
-      d = clamp(Math.min(W * .56, fold - el.offsetTop - (th - lap) - 40), 148, 360);
-      north = true; fx = W / 2; fy = 8 + d / 2;
-      dx = Math.min(W / 2 - d / 4 - 8, d * .78); dy = d * .1;   // the neighbours stay whole on the screen, tucked a little behind the front plate
-      tx = (W - tw) / 2; tb = 0;
-      put({ '--stage': d + 16, '--lap': lap });
-    } else {
-      const navH = parseFloat(getComputedStyle(root).getPropertyValue('--nav-h')) || 80;
-      const top = navH + 12, bottom = hero.clientHeight - 28;
-      const left = cr.right - hr.left + 32, right = Math.min(W - 20, W - g + 96), rw = right - left, rh = bottom - top;
-      let ty;
-      if (rw >= 540) {
-        // beside the words, with room: the card hangs off the plate's lower left, the neighbours tuck in on the right
-        tw = 328; th = cardHeight(tw);
-        d = clamp(Math.min((rh - th) / .72, (rw - 64) / 1.37, 520), 220, 520);
-        const over = clamp(64 + (rw - (1.37 * d + 64)) * .8, 64, 150), groupH = d * .72 + th;
-        if (groupH > rh) need = top + groupH + 28;
-        const room = Math.max(rh, groupH), L = d * .62;
-        fy = top + (room - groupH) / 2 + d / 2;
-        dy = Math.max(d * .2, Math.min(d * .475, fy - top - d / 4, top + room - fy - d / 4));
-        dx = Math.sqrt(L * L - dy * dy);
-        fx = left + Math.max(0, (rw - (d / 2 + over + dx + d / 4)) / 2) + over + d / 2;
-        north = false; tx = fx - d / 2 - over; ty = fy + d * .22;
-      } else {
-        // beside the words in a narrow column: the plate above, its neighbours either side, the card under it
-        const lap = 40;
-        tw = Math.min(rw, 340); th = cardHeight(tw);
-        d = clamp(Math.min(rw * .72, rh - th + lap), 104, 360);
-        const groupH = d + th - lap;
-        if (groupH > rh) need = top + groupH + 28;
-        fx = left + rw / 2; fy = top + (Math.max(rh, groupH) - groupH) / 2 + d / 2;
-        dx = Math.max(d * .45, Math.min(rw / 2 - d / 4 - 4, d * .78)); dy = d * .08;
-        north = true; tx = fx - tw / 2; ty = fy + d / 2 - lap;
-      }
-      if (need) hero.style.setProperty('--need', Math.ceil(need) + 'px');
-      tb = Math.max(hero.clientHeight, need) - (ty + th);   // the card hangs from its bottom edge
-    }
-    // the ring those three points sit on. Facing north the front plate is its top; facing west, its left end.
-    geo = north ? { north, d, fx, R: dx / H, Ry: dy / (1 - H), anchor: -Math.PI / 2, per: dx * .95 } : { north, d, fx, R: dx / (1 - H), Ry: dy / H, anchor: Math.PI, per: Math.hypot(dx, dy) * .9 };
-    geo.cx = north ? fx : fx + geo.R; geo.cy = north ? fy + geo.Ry : fy;
-    el.classList.toggle('is-north', north);
-    put({ '--R': geo.R, '--Ry': geo.Ry, '--d': d, '--cx': geo.cx, '--cy': geo.cy, '--tw': tw, '--th': th, '--tx': tx, '--tb': tb });
-    place();
-    el.classList.add('is-set');
-  };
-
-  const signed = i => { let k = (((i - pos) % n) + n) % n; if (k > n / 2) k -= n; return k; };
-  const place = () => {
-    if (!geo) return;
-    plates.forEach((p, i) => {
-      const k = signed(i), far = Math.abs(k), a = geo.anchor + k * step, near = Math.max(0, 1 - far), s = .5 + .5 * near * near * (3 - 2 * near);
-      p.style.setProperty('--x', (Math.cos(a) * geo.R).toFixed(1) + 'px');
-      p.style.setProperty('--y', (Math.sin(a) * geo.Ry).toFixed(1) + 'px');
-      p.style.setProperty('--s', s.toFixed(3));
-      p.style.setProperty('--o', clamp((1.5 - far) / .4).toFixed(2));   // a plate fades in as it becomes a neighbour, and out as it leaves
-      p.style.zIndex = String(10 - Math.round(far));
-      p.classList.toggle('is-far', far >= 1.5);
+  const write = (host, text, quick) => {
+    const chars = text.toUpperCase().slice(0, N).padEnd(N).split('');
+    tiles.get(host).forEach((t, i) => {
+      const c = chars[i] === ' ' ? '' : chars[i];
+      clearTimeout(t._swap);
+      if (t.textContent === c) { t.classList.remove('is-flip'); return; }
+      if (quick || reduced) { t.classList.remove('is-flip'); t.textContent = c; return; }
+      const wait = i * 24;
+      t.classList.remove('is-flip');
+      t.style.animationDelay = wait + 'ms';
+      void t.offsetWidth;
+      t.classList.add('is-flip');
+      t._swap = setTimeout(() => { t.textContent = c; }, wait + 130);
     });
   };
 
-  const show = i => {
-    if (i === shown) return;
-    const first = shown < 0;
-    shown = i;
-    const p = plates[i];
-    hero.style.setProperty('--g', p.dataset.ground);
-    hero.dataset.tone = p.dataset.tone;
-    navTone();
-    $('meta[name="theme-color"]')?.setAttribute('content', p.dataset.ground);
-    plates.forEach((q, j) => { j === i ? q.setAttribute('aria-current', 'true') : q.removeAttribute('aria-current'); });
-    // the next two along are fetched ahead, so a turn never shows an empty plate
-    [1, -1, 2].forEach(o => { const img = $('img', plates[(i + o + n) % n]); if (img && img.loading === 'lazy') img.loading = 'eager'; });
-    const write = () => { nameEl.textContent = p.dataset.name; priceEl.textContent = p.dataset.price; descEl.textContent = p.dataset.desc; nEl.textContent = i + 1; };
-    clearTimeout(swap);
-    if (first || reduced) write();
-    else { text.classList.add('is-out'); swap = setTimeout(() => { write(); text.classList.remove('is-out'); }, 160); }
-    if (!first && p.dataset.key === 'sprinkle' && geo) sprinkles(geo.fx, geo.d * 1.5);
+  // the two rows that do not change with the day
+  const fixed = [];
+  const fresh = $('[data-flap-new]', el), rating = $('[data-flap-rating]', el);
+  const drop = (host, key) => { host.hidden = true; const k = $(key, el); if (k) k.hidden = true; };
+  if (fresh) {
+    const row = $('#menu .row__note')?.closest('.row');
+    const name = row ? $('.row__name', row).firstChild.textContent.trim() : '', price = row ? $('.row__price', row).textContent.trim() : '';
+    if (name && price) {
+      const nameEl = $('[data-flap-new-name]', el), go = $('[data-flap-new-k] a', el);
+      if (nameEl) nameEl.textContent = 'the ' + name.charAt(0).toUpperCase() + name.slice(1);
+      if (go) go.dataset.pick = row.dataset.id;
+      fixed.push([fresh, `${name.split(' ').pop()} ${price}`, `${name}, ${price}`]);
+    } else drop(fresh, '[data-flap-new-k]');
+  }
+  if (rating) {
+    const m = ($('#reviews-h')?.textContent || '').match(/([\d.]+)\s+on\s+Google,\s+from\s+([\d,]+)/);
+    if (m) {
+      const count = $('[data-flap-count]', el);
+      if (count) count.textContent = m[2];
+      fixed.push([rating, `${m[1]} on Google`, `${m[1]} out of 5 on Google`]);
+    } else drop(rating, '[data-flap-rating-k]');
+  }
+
+  // what the first two rows say for a day: short words for the tiles, whole words for the line above and for a screen reader
+  const read = day => {
+    const now = shopNow(), today = day === now.day, w = hours.week[day], c = cards[day] || {};
+    let shop = 'Closed', shopSay = 'closed';
+    if (w && w.open != null) {
+      if (!today) { shop = `${clock(w.open)} to ${clock(w.close)}`; shopSay = `open ${clock(w.open)} to ${clock(w.close)}`; }
+      else if (now.mins < w.open) { shop = `Opens at ${clock(w.open)}`; shopSay = `opens at ${clock(w.open)}`; }
+      else if (now.mins < w.close) { shop = `Open until ${clock(w.close)}`; shopSay = `open until ${clock(w.close)}`; }
+      else { shop = 'Closed for today'; shopSay = `closed for today, since ${clock(w.close)}`; }
+    }
+    let bus = 'At the shop', line = c.parked ? c.parked.charAt(0).toLowerCase() + c.parked.slice(1) : 'parked at the shop', link = { href: '#book', text: 'Book it' };
+    if (c.out) {
+      const [a, b] = c.out;
+      line = `${noHalf(clock(a))} to ${clock(b)} at ${c.place}`;
+      link = { href: c.href, text: 'Directions' };
+      if (today && now.mins >= a && now.mins < b) { bus = `Now in ${c.town}`; line = `until ${clock(b)} at ${c.place}`; }
+      else if (today && now.mins >= b) bus = 'Done for today';
+      else bus = `${noHalf(clockFull(a))} ${c.town}`;
+    }
+    return { shop, shopSay, bus, line, link };
   };
 
-  const front = () => (((Math.round(pos) % n) + n) % n);
-  const frame = () => {
-    raf = 0;
-    const diff = target - pos;
-    pos = Math.abs(diff) < .0015 ? target : pos + diff * (drag.on ? .5 : entering ? .07 : .13);
-    place();
-    if (!entering) show(front());
-    if (pos !== target) raf = requestAnimationFrame(frame); else entering = false;
+  let sel = -1;
+  const caption = s => {
+    shopRow.setAttribute('aria-label', `${NAMES[sel]}: ${s.shopSay}`);
+    busRow.setAttribute('aria-label', `${NAMES[sel]}: ${s.line}`);
+    const a = document.createElement('a');
+    a.href = s.link.href;
+    a.textContent = s.link.text;
+    where.textContent = s.line + '. ';
+    where.append(a);
   };
-  const run = () => { if (reduced) { pos = target; place(); show(front()); } else if (!raf) raf = requestAnimationFrame(frame); };
-  const go = by => { entering = false; target = Math.round(target) + by; run(); };
-
-  text.setAttribute('aria-live', 'polite');
-  prev?.addEventListener('click', () => go(-1));
-  next?.addEventListener('click', () => go(1));
-
-  // dragging. A mouse may pull up and down where the neighbours sit above and below; a finger always pulls sideways, so the page still scrolls.
-  const drag = { on: false, id: null, x: 0, y: 0, start: 0, moved: 0, axis: null, t: 0, v: 0, lastPos: 0, plate: null };
-  const along = e => {
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.axis && Math.hypot(dx, dy) > 6) drag.axis = geo.north || e.pointerType !== 'mouse' || Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-    return drag.axis === 'y' ? dy : drag.axis === 'x' ? -dx : 0;
+  const paint = quick => { const s = read(sel); caption(s); write(shopRow, s.shop, quick); write(busRow, s.bus, quick); return s; };
+  const pick = day => {
+    sel = day;
+    btns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.flapDay === day)));
+    const s = paint();
+    if (say) say.textContent = `${NAMES[day]}. The shop: ${s.shopSay}. The bus: ${s.line}.`;
   };
-  el.addEventListener('pointerdown', e => {
-    const plate = e.target.closest('[data-plate]');
-    if (!plate || e.button) return;
-    entering = false;
-    Object.assign(drag, { on: true, id: e.pointerId, x: e.clientX, y: e.clientY, start: pos, moved: 0, axis: null, t: e.timeStamp, v: 0, lastPos: pos, plate });
-    target = pos;
-  });
-  addEventListener('pointermove', e => {
-    if (!drag.on || e.pointerId !== drag.id) return;
-    const d = along(e);
-    drag.moved = Math.max(drag.moved, Math.abs(d));
-    if (!drag.axis) return;
-    if (drag.moved > 6 && !el.classList.contains('is-dragging')) { el.classList.add('is-dragging'); try { drag.plate.setPointerCapture(drag.id); } catch { /* the pointer has gone */ } }
-    target = drag.start + d / geo.per;
-    const dt = Math.max(1, e.timeStamp - drag.t);
-    drag.v = .7 * drag.v + .3 * ((target - drag.lastPos) / dt * 1000);
-    drag.t = e.timeStamp; drag.lastPos = target;
-    run();
-  });
-  const release = e => {
-    if (!drag.on || e.pointerId !== drag.id) return;
-    drag.on = false;
-    el.classList.remove('is-dragging');
-    if (drag.moved <= 6) target = Math.round(pos) + Math.round(signed(plates.indexOf(drag.plate)));   // a tap: bring that plate to the front
-    else target = Math.round(target + clamp(drag.v * .16, -1.6, 1.6));
-    run();
-  };
-  addEventListener('pointerup', release);
-  addEventListener('pointercancel', release);
-  el.addEventListener('dragstart', e => e.preventDefault());
+  btns.forEach(b => b.addEventListener('click', () => pick(+b.dataset.flapDay)));
 
-  // Under the words the plate is sized from the screen's height. A phone's bars sliding away must not resize it, so a change in height alone is ignored there unless it is large.
-  let rz = 0;
-  addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { if (stacked.matches && hero.clientWidth === lastW && Math.abs(innerHeight - lastH) < 160) return; measure(); }); });
-  stacked.addEventListener('change', measure);
-  if (document.fonts?.ready) document.fonts.ready.then(measure);
-  measure();
-  show(0);
-  run();   // the entrance: the ring rolls the first plate into place
-})();
-
-/* ---------------------------------------------------------------- the strip under the first screen: where the bus is next */
-(() => {
-  const out = $('[data-bus-next]');
-  if (!out) return;
-  const outings = $$('.day[data-out][data-place]').map(d => { const [a, b] = d.dataset.out.split('-').map(toMins); return { day: +d.dataset.day, a, b, place: d.dataset.place }; });
-  if (!outings.length) return;
-  const NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // it opens on today while the shop still has hours left in the day, or else on its next open day
   try {
     const now = shopNow();
+    sel = btns.map(b => +b.dataset.flapDay)[0];
     for (let k = 0; k < 8; k++) {
-      const wd = (now.day + k) % 7, o = outings.find(x => x.day === wd);
-      if (!o || (k === 0 && now.mins >= o.b)) continue;
-      const span = `${clock(o.a).replace(/\s[ap]m$/, '')} to ${clock(o.b)}`;
-      out.textContent = k === 0 && now.mins >= o.a ? `Out now until ${clock(o.b)}, at ${o.place}` : `${k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : NAMES[wd]}, ${span}, at ${o.place}`;
-      break;
+      const d = (now.day + k) % 7, w = hours.week[d];
+      if (w && w.open != null && !(k === 0 && now.mins >= w.close)) { sel = d; break; }
     }
-  } catch { /* no clock: the line stands as written */ }
+    [shopRow, busRow, ...fixed.map(f => f[0])].forEach(dress);
+    fixed.forEach(([host, , label]) => host.setAttribute('aria-label', label));
+    btns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.flapDay === sel)));
+    caption(read(sel));
+    // the board arrives blank and turns to its words once, a row after a row
+    setTimeout(() => { paint(); fixed.forEach(([host, text], i) => setTimeout(() => write(host, text), reduced ? 0 : 160 * (i + 1))); }, reduced ? 0 : 520);
+    setInterval(() => { if (sel === shopNow().day) paint(); }, 60000);
+  } catch { /* no clock: the lines stand as written */ }
 })();
 
 /* ---------------------------------------------------------------- words that fill in as the page moves */
@@ -606,6 +482,170 @@ const draw = (() => {
     select(tabs.find(t => t.getAttribute('aria-controls') === row.closest('.panel').id));
     open(row);
   };
+
+  /* -------- the wall: every photographed plate out at once, the coffee bar as chalk rings under them.
+     It is built from the lines of the list above, so the menu is still written once; the list stays one click away
+     ("Read it as a list") and is what shows without the script.
+     With a mouse on a wide window the picked plate lifts and its card stands beside it. On a narrow or a touch
+     screen the card opens in the page under the plate's row, with the photograph in it.
+     The plates are one stop for the Tab key; the arrow keys walk them. */
+  const grid = $('.board__grid', sec), lede = $('.head p', sec);
+  if (!grid || !rows.length) return;
+  const ORDER = $('.board__foot a.btn', sec)?.getAttribute('href') || '#';
+  const LEDE = { wall: 'Every plate is out at once. Pick one to see it, or put it in a box of twelve.', list: lede ? lede.textContent : '' };
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const items = rows.map(row => ({ row, id: row.dataset.id, cat: row.closest('.panel').id, photo: !!row.dataset.img, name: $('.row__name', row).firstChild.textContent.trim(), price: $('.row__price', row).textContent.trim(), desc: ($('.row__desc', row)?.textContent || '').trim() }));
+  const wall = document.createElement('div');
+  wall.className = 'wall';
+  wall.innerHTML = `
+    <div class="wall__bar">
+      <div class="wall__filters" role="group" aria-label="Show one part of the menu">
+        <button class="tab" type="button" aria-pressed="true" data-cat="">Everything<i>${items.length}</i></button>
+        ${tabs.map(t => { const id = t.getAttribute('aria-controls'); return `<button class="tab" type="button" aria-pressed="false" data-cat="${id}">${esc(t.textContent.trim())}<i>${items.filter(i => i.cat === id).length}</i></button>`; }).join('')}
+      </div>
+      <button class="textlink wall__swap" type="button">Read it as a list</button>
+    </div>
+    <div class="wall__plates"></div>
+    <div class="wall__drinks"><p class="wall__note">The coffee bar, drawn in chalk</p></div>`;
+  const platesEl = $('.wall__plates', wall), drinksEl = $('.wall__drinks', wall), swap = $('.wall__swap', wall), filters = $$('.wall__filters .tab', wall);
+  const btns = items.map((it, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = it.photo ? 'pl' : 'pl pl--ring';
+    b.dataset.id = it.id;
+    b.tabIndex = i ? -1 : 0;
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-label', `${it.name}, ${it.price}`);
+    if (it.photo) {
+      const img = new Image(400, 500);
+      img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+      img.src = `${IMG}${it.row.dataset.img}-400.webp`;
+      img.style.objectPosition = it.row.dataset.pos || '50% 50%';
+      b.append(img);
+    } else b.textContent = it.name;
+    it.btn = b;
+    return b;
+  });
+  const photos = items.filter(i => i.photo), rings = items.filter(i => !i.photo);
+  rings.forEach(i => drinksEl.append(i.btn));
+  if (!rings.length) drinksEl.hidden = true;
+
+  // offset rows: how many plates fit one, and how wide they are, come from the room there is
+  const pop = matchMedia('(min-width: 760px) and (hover: hover) and (pointer: fine)');
+  let perRow = 0, size = 0;
+  const layout = () => {
+    const W = platesEl.clientWidth;
+    if (!W) return;
+    const n = W >= 1000 ? 9 : W >= 720 ? 7 : W >= 500 ? 5 : 4, g = W >= 720 ? 12 : 10;
+    const d = Math.floor(Math.min(132, (W - (n - 1) * g - g / 2) / (n + 0.5)));
+    if (n === perRow && d === size) return;
+    closeCard();
+    perRow = n; size = d;
+    wall.style.setProperty('--d', d + 'px');
+    wall.style.setProperty('--g', g + 'px');
+    const frag = document.createDocumentFragment();
+    for (let k = 0, r = 0; k < photos.length; k += n, r++) {
+      const line = document.createElement('div');
+      line.className = 'wall__row' + (r % 2 ? ' is-odd' : '');
+      photos.slice(k, k + n).forEach(i => line.append(i.btn));
+      frag.append(line);
+    }
+    platesEl.replaceChildren(frag);
+  };
+
+  const card = document.createElement('div');
+  let openIt = null;
+  const place = () => {
+    if (!openIt || !wall.classList.contains('is-pop')) return;
+    const b = openIt.btn, w = wall.clientWidth, h = wall.clientHeight, cw = card.offsetWidth, ch = card.offsetHeight;
+    const wr = wall.getBoundingClientRect(), rest = b.offsetParent === wall ? { x: b.offsetLeft, y: b.offsetTop } : (() => { const p = b.offsetParent.getBoundingClientRect(); return { x: p.left - wr.left + b.offsetLeft, y: p.top - wr.top + b.offsetTop }; })();
+    const half = b.offsetWidth / 2, reach = half * (openIt.photo ? 1.5 : 1.12), cx = rest.x + half, cy = rest.y + half;
+    let left = cx + reach + 18;
+    if (left + cw > w) left = cx - reach - 18 - cw;
+    if (left < 0) left = clamp(cx - cw / 2, 0, w - cw);
+    card.style.setProperty('--cx', Math.round(left) + 'px');
+    card.style.setProperty('--cy', Math.round(clamp(cy - ch / 2, 0, Math.max(0, h - ch))) + 'px');
+  };
+  function closeCard(refocus) {
+    if (!openIt) return;
+    const b = openIt.btn;
+    b.setAttribute('aria-expanded', 'false');
+    openIt = null;
+    card.remove();
+    if (refocus) b.focus();
+  }
+  const openPlate = it => {
+    if (!it) return;
+    if (openIt === it) { closeCard(); return; }
+    closeCard();
+    openIt = it;
+    it.btn.setAttribute('aria-expanded', 'true');
+    card.className = 'wall__card' + (it.photo ? '' : ' is-drawn');
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', it.name);
+    const box = it.row.dataset.box;
+    card.innerHTML = `<figure class="wall__pic"></figure><div class="wall__text"><h3>${esc(it.name)}<span>${esc(it.price)}</span></h3><p>${esc(it.desc)}</p><div class="wall__acts">${box ? `<button type="button" class="add" data-add="${box}">${icon('plus')}Add to my box</button>` : `<a class="textlink" href="${ORDER}">Order online</a>`}<button type="button" class="wall__close">Close</button></div></div>`;
+    $('.wall__pic', card).append(picture(it.row, false));
+    if (wall.classList.contains('is-pop')) { wall.append(card); place(); }
+    else {
+      (it.btn.closest('.wall__row') || drinksEl).after(card);
+      // keep the whole card in view, clear of the order bar a phone carries at the bottom
+      const r = card.getBoundingClientRect(), room = innerHeight - (innerWidth < 600 ? 92 : 12);
+      if (r.bottom > room) scrollBy({ top: Math.min(r.bottom - room, it.btn.getBoundingClientRect().top - 96), behavior: reduced ? 'auto' : 'smooth' });
+    }
+  };
+
+  wall.addEventListener('click', e => {
+    const b = e.target.closest('.pl');
+    if (b) { const i = btns.indexOf(b); roam(i, false); openPlate(items[i]); return; }
+    if (e.target.closest('.wall__close')) { closeCard(true); return; }
+    const f = e.target.closest('.wall__filters .tab');
+    if (f) {
+      filters.forEach(x => x.setAttribute('aria-pressed', String(x === f)));
+      items.forEach(it => it.btn.classList.toggle('is-dim', !!f.dataset.cat && it.cat !== f.dataset.cat));
+      if (openIt && openIt.btn.classList.contains('is-dim')) closeCard();
+    }
+  });
+  // a press anywhere else puts the plate back (on the press, so a link that opens a plate is not undone by its own click)
+  document.addEventListener('pointerdown', e => { if (openIt && wall.classList.contains('is-pop') && !e.target.closest('.wall__card, .pl')) closeCard(); });
+
+  let at = 0;
+  function roam(i, focus = true) {
+    btns[at].tabIndex = -1;
+    at = (i + btns.length) % btns.length;
+    btns[at].tabIndex = 0;
+    if (focus) btns[at].focus();
+  }
+  // Escape puts the plate back from anywhere; the focus goes back to it only if it was on the wall
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && openIt) { e.preventDefault(); closeCard(wall.contains(document.activeElement)); } });
+  wall.addEventListener('keydown', e => {
+    if (!e.target.closest('.pl')) return;
+    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: perRow, ArrowUp: -perRow }[e.key];
+    if (step) { e.preventDefault(); roam(clamp(at + step, 0, btns.length - 1)); }
+    else if (e.key === 'Home') { e.preventDefault(); roam(0); }
+    else if (e.key === 'End') { e.preventDefault(); roam(btns.length - 1); }
+  });
+
+  const setView = v => {
+    closeCard();
+    sec.dataset.view = v;
+    swap.textContent = v === 'wall' ? 'Read it as a list' : 'See every plate';
+    if (lede) lede.textContent = LEDE[v];
+    if (v === 'list') { current = null; show(activeIn(panels.find(p => !p.hidden))); } else requestAnimationFrame(layout);
+  };
+  swap.addEventListener('click', () => setView(sec.dataset.view === 'wall' ? 'list' : 'wall'));
+  const mode = () => { closeCard(); wall.classList.toggle('is-pop', pop.matches); wall.classList.toggle('is-flow', !pop.matches); };
+  pop.addEventListener('change', mode);
+  mode();
+  grid.before(wall);
+  setView('wall');
+  layout();
+  if ('ResizeObserver' in window) new ResizeObserver(() => { layout(); place(); }).observe(platesEl);
+  else addEventListener('resize', () => { layout(); place(); });
+
+  // the bar at the top opens the new pastry: on the wall that is its plate, in the list its line
+  const pickLine = hooks.pick;
+  hooks.pick = id => { if (sec.dataset.view === 'wall') { const it = items.find(i => i.id === id); if (it && openIt !== it) openPlate(it); } else pickLine(id); };
 })();
 
 /* ---------------------------------------------------------------- build a dozen */

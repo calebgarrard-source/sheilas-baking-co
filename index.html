@@ -27,8 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Besley:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="assets/img/w-glazed-880.webp" imagesrcset="assets/img/w-glazed-440.webp 440w, assets/img/w-glazed-880.webp 880w" imagesizes="(min-width: 900px) 30vw, 58vw">
-<link rel="stylesheet" href="assets/site.css?v=6">
+<link rel="stylesheet" href="assets/site.css?v=8">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Bakery","name":"Sheila's Baking Co.","url":"https://www.sheilasbakingco.com/","telephone":"+1-803-646-0668","email":"sheilasbakingco@gmail.com","priceRange":"$","address":{"@type":"PostalAddress","streetAddress":"434 Georgia Ave","addressLocality":"North Augusta","addressRegion":"SC","postalCode":"29841","addressCountry":"US"},"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Tuesday","Wednesday","Thursday","Friday"],"opens":"06:00","closes":"13:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Saturday","opens":"07:00","closes":"13:00"}],"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"491"},"menu":"https://my-site-109578-106714.square.site/"}
 </script>
@@ -67,7 +66,7 @@
   <span class="announce__go">See it</span>
 </a>
 
-<header class="nav" data-nav>
+<header class="nav nav--solid" data-nav>
   <div class="wrap nav__bar">
     <a class="logo" href="#top" aria-label="Sheila's Baking Co., back to the top"></a>
     <nav class="nav__links" aria-label="Main">
@@ -109,94 +108,45 @@
 
 <main id="main">
 
-  <!-- HERO: the wheel. Eight favourites on a ring; the first screen takes the colour of whichever is in front.
-       The script fits the plate, its two neighbours and the label card into the space the words leave. -->
-  <section class="hero" id="top" data-hero data-tone="ink">
-    <div class="wrap hero__grid">
-      <div class="hero__copy">
-        <h1 class="hero__title" data-enter>
-          <span class="hero__line">Pre-made</span>
-          <span class="hero__line">mixes don't</span>
-          <span class="hero__line">exist here</span>
-          <span class="sr-only">: Sheila's Baking Co., a scratch bakery for doughnuts and pastries in North Augusta, South Carolina</span>
-        </h1>
-        <p class="hero__lead" data-enter>Handcrafted doughnuts and pastries in North Augusta, South Carolina. <a href="#reviews">4.9 on Google, from 491 reviews.</a></p>
-        <div class="hero__cta" data-enter>
-          <a class="btn" href="https://my-site-109578-106714.square.site/">Order online <svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></a>
-          <a class="btn btn--line" href="#box">Build a dozen</a>
-        </div>
+  <!-- HERO: her words on her green, and a flip board where a photograph would be. No photograph is used.
+       The board's first two rows show the shop's hours and where the bus is for the day picked under them: they read
+       the hours list in Visit and the day cards in Find the bus. The third row is this month's new pastry, read from
+       the line on the menu that carries a note; the fourth is the rating, read from the reviews heading. So each fact
+       is written in one place only. Without the script the four lines stand as written and the day buttons are hidden. -->
+  <section class="hero hero--board" id="top" data-hero data-tone="ink">
+    <div class="hero__copy">
+      <h1 class="hero__title" data-enter>
+        <span class="hero__line">Pre-made</span>
+        <span class="hero__line">mixes don't</span>
+        <span class="hero__line">exist here</span>
+        <span class="sr-only">: Sheila's Baking Co., a scratch bakery for doughnuts and pastries in North Augusta, South Carolina</span>
+      </h1>
+      <p class="hero__lead" data-enter>Handcrafted doughnuts and pastries in North Augusta, South Carolina.</p>
+      <div class="hero__cta" data-enter>
+        <a class="btn" href="https://my-site-109578-106714.square.site/">Order online <svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></a>
+        <a class="btn btn--line" href="#box">Build a dozen</a>
       </div>
     </div>
 
-    <div class="wheel" data-wheel>
-      <div class="wheel__track" aria-hidden="true"></div>
-      <ul class="wheel__ring" data-ring aria-label="Eight favourites from the case">
-        <li class="plate" data-plate data-key="glazed" data-name="Vanilla glazed doughnut" data-price="$3.00" data-desc="Tall, fluffy and golden, glazed hot with our signature vanilla glaze" data-ground="#8fae98" data-tone="ink">
-          <img src="assets/img/w-glazed-440.webp" srcset="assets/img/w-glazed-440.webp 440w, assets/img/w-glazed-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="A vanilla glazed doughnut on a green plate" fetchpriority="high" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="fritter" data-name="Apple fritter" data-price="$3.75" data-desc="A golden fritter bursting with earthy spices and apples, dunked in vanilla glaze" data-ground="#a9541f" data-tone="cream">
-          <img src="assets/img/w-fritter-440.webp" srcset="assets/img/w-fritter-440.webp 440w, assets/img/w-fritter-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="Glazed apple fritters on a wooden board beside a cut apple" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="sprinkle" data-name="Vanilla sprinkle doughnut" data-price="$3.25" data-desc="What is life without sprinkles? Dipped in vanilla glaze under a flurry of them." data-ground="#8fc0ba" data-tone="ink">
-          <img src="assets/img/w-sprinkle-440.webp" srcset="assets/img/w-sprinkle-440.webp 440w, assets/img/w-sprinkle-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="Vanilla glazed doughnuts covered in rainbow sprinkles" loading="lazy" decoding="async" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="caramelli" data-name="Caramelli cinnamon roll" data-price="$4.50" data-desc="One of Sheila's favorites: brown sugar, cinnamon and brown butter cream cheese frosting" data-ground="#e3a64c" data-tone="ink">
-          <img src="assets/img/w-caramelli-440.webp" srcset="assets/img/w-caramelli-440.webp 440w, assets/img/w-caramelli-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="A cinnamon roll under brown butter cream cheese frosting" loading="lazy" decoding="async" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="chocolate" data-name="Chocolate iced doughnut" data-price="$3.25" data-desc="Dunked in chocolate icing, then dipped in sprinkles or drizzled with vanilla glaze" data-ground="#3b241a" data-tone="cream">
-          <img src="assets/img/w-chocolate-440.webp" srcset="assets/img/w-chocolate-440.webp 440w, assets/img/w-chocolate-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="A chocolate iced doughnut drizzled with vanilla glaze" loading="lazy" decoding="async" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="pumpkin" data-name="Pumpkin cheesecake doughnut" data-price="$6.00" data-desc="Spiced pumpkin and whipped cheesecake inside, brown butter icing and streusel on top" data-ground="#e0822f" data-tone="ink">
-          <img src="assets/img/w-pumpkin-440.webp" srcset="assets/img/w-pumpkin-440.webp 440w, assets/img/w-pumpkin-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="Filled doughnuts with brown butter icing and a swirl of buttercream" loading="lazy" decoding="async" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="klobasnek" data-name="Klobasnek" data-price="$4.50" data-desc="A Texas-Czech favorite: jalapeño cheese sausage wrapped in sweet kolache dough" data-ground="#55702f" data-tone="cream">
-          <img src="assets/img/w-klobasnek-440.webp" srcset="assets/img/w-klobasnek-440.webp 440w, assets/img/w-klobasnek-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="Sausage kolaches topped with pickled jalapeño slices" loading="lazy" decoding="async" draggable="false">
-        </li>
-        <li class="plate" data-plate data-key="cruffin" data-name="French toast cruffin" data-price="$7.75" data-desc="New in November. Tossed in cinnamon sugar and filled with whipped maple cream." data-ground="#7e4322" data-tone="cream">
-          <img src="assets/img/w-cruffin-440.webp" srcset="assets/img/w-cruffin-440.webp 440w, assets/img/w-cruffin-880.webp 880w" sizes="(min-width: 900px) 30vw, 58vw" width="880" height="880" alt="Two cruffins rolled in cinnamon sugar, topped with maple cream" loading="lazy" decoding="async" draggable="false">
-        </li>
-      </ul>
-
-      <!-- the card that stands by the front plate, like the label in a pastry case -->
-      <div class="tag" data-enter>
-        <div class="tag__text" data-now>
-          <p class="tag__name"><span data-now-name>Vanilla glazed doughnut</span><span class="tag__price" data-now-price>$3.00</span></p>
-          <p class="tag__desc" data-now-desc>Tall, fluffy and golden, glazed hot with our signature vanilla glaze</p>
-        </div>
-        <div class="tag__ctrl">
-          <button class="sq" type="button" data-wheel-prev aria-label="Previous favourite"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg></button>
-          <p class="tag__count"><span data-now-n>1</span> of 8</p>
-          <button class="sq" type="button" data-wheel-next aria-label="Next favourite"><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></button>
-        </div>
+    <div class="flap" data-flap data-enter>
+      <p class="flap__k"><b>The shop</b>, <a href="https://www.google.com/maps/dir/?api=1&amp;destination=Sheila%27s+Baking+Co.%2C+434+Georgia+Ave%2C+North+Augusta%2C+SC+29841">434 Georgia Ave</a></p>
+      <p class="flap__t" data-flap-shop>Tuesday to Friday 6&nbsp;am to 1&nbsp;pm, Saturday 7&nbsp;am to 1&nbsp;pm</p>
+      <p class="flap__k flap__k--bus"><b>The bus</b>, <span data-flap-where>Thursdays in Martinez and Fridays in Aiken</span></p>
+      <p class="flap__t" data-flap-bus>7 to 10:30&nbsp;am, two mornings a week</p>
+      <p class="flap__k" data-flap-new-k><b>New this month</b>, <span data-flap-new-name>the French toast cruffin</span>. <a href="#menu" data-pick="cruffin">See it</a></p>
+      <p class="flap__t" data-flap-new>Filled with whipped maple cream, $7.75</p>
+      <p class="flap__k" data-flap-rating-k><b>On Google</b>, from <span data-flap-count>491</span> reviews. <a href="#reviews">Read them</a></p>
+      <p class="flap__t" data-flap-rating>4.9 out of 5</p>
+      <div class="flap__days" role="group" aria-label="Flip the board to a day" data-flap-days>
+        <span aria-hidden="true">Flip to a day</span>
+        <button class="flap__d" type="button" data-flap-day="2" aria-pressed="false">Tue</button>
+        <button class="flap__d" type="button" data-flap-day="3" aria-pressed="false">Wed</button>
+        <button class="flap__d" type="button" data-flap-day="4" aria-pressed="false">Thu</button>
+        <button class="flap__d" type="button" data-flap-day="5" aria-pressed="false">Fri</button>
+        <button class="flap__d" type="button" data-flap-day="6" aria-pressed="false">Sat</button>
       </div>
+      <p class="sr-only" aria-live="polite" data-flap-say></p>
     </div>
-  </section>
-
-  <!-- TODAY: the three things people come for first. Is it open, where is it, where is the bus. -->
-  <section class="today" aria-label="Today at Sheila's">
-    <dl class="wrap today__grid">
-      <div class="today__cell">
-        <dt>The shop</dt>
-        <dd>
-          <p class="status" data-status><span class="status__dot" aria-hidden="true"></span><span data-status-text>Open Tuesday to Saturday</span></p>
-          <p class="today__more">Tuesday to Friday 6&nbsp;am to 1&nbsp;pm, Saturday 7&nbsp;am to 1&nbsp;pm</p>
-        </dd>
-      </div>
-      <div class="today__cell">
-        <dt>Where</dt>
-        <dd>
-          <p>434 Georgia Ave, North Augusta</p>
-          <a class="textlink" href="https://www.google.com/maps/dir/?api=1&amp;destination=Sheila%27s+Baking+Co.%2C+434+Georgia+Ave%2C+North+Augusta%2C+SC+29841">Get directions</a>
-        </dd>
-      </div>
-      <div class="today__cell">
-        <dt>The bus</dt>
-        <dd>
-          <p data-bus-next>Thursdays in Martinez and Fridays in Aiken, 7 to 10:30&nbsp;am</p>
-          <a class="textlink" href="#bus">See where it stops</a>
-        </dd>
-      </div>
-    </dl>
   </section>
 
   <!-- THE BOARD: the whole menu. Every line opens: a photograph where the bakery has one, a drawing for the drinks.
@@ -947,6 +897,6 @@
 
 <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
 
-<script defer src="assets/site.js?v=6"></script>
+<script defer src="assets/site.js?v=8"></script>
 </body>
 </html>
